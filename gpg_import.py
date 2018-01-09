@@ -18,13 +18,16 @@ description:
 options:
   key_id:
     description:
-      - The id of the key to be fetched and imported. Only applicable to public keys. Either key_file or key_id is required.
+      - When attempting to fetch and import, the id of the key requested. When deleting a pre-existing 
+        key, this must be the fingerprint of the key to delete. Either key_file or key_id is required.
     required: false
     default: null
 
   key_file:
     description:
       - Filename of key to be imported. Must be on remote machine, not local. Either key_file or key_id is required.
+        Can also be used with delete, module will extract the fingerprint from the provided key file and
+        delete the matching key from the key-chain.
     required: false
     default: null
 
@@ -196,12 +199,12 @@ class GpgImport(object):
             self.key_id = key_override
         self.commands = {
             'check':   '{bin_path} {check_mode} --list-keys {key_id}',
-            'delete':  '{bin_path} {check_mode} --batch --yes --delete-keys {key_id}',
+            'delete':  '{bin_path} {check_mode} --batch --yes --delete-secret-and-public-keys {key_id}',
             'refresh': '{bin_path} {check_mode} --keyserver {url} --keyserver-options timeout={timeout} --refresh-keys {key_id}',
             'check-private':  '{bin_path} {check_mode} --list-secret-keys {key_id}',
             'recv':    '{bin_path} {check_mode} --keyserver {url} --keyserver-options timeout={timeout} --recv-keys {key_id}',
             'check-public':  '{bin_path} {check_mode} --list-public-keys {key_id}',
-            'import-key': '{bin_path} {check_mode} --import {key_file}'
+            'import-key': '{bin_path} {check_mode} --batch --import {key_file}'
         }
         command_data = {
             'check_mode': '--dry-run' if self.m.check_mode else '',
@@ -249,16 +252,15 @@ class GpgImport(object):
         return rdic
 
     def _get_key_from_file(self):
-        keycmd = '%s --dry-run --import %s'
+        keycmd = '%s --with-colons --with-fingerprint %s'
         bp = self.m.get_bin_path(self.bin_path, True)
         print(bp, self.key_file)
         keycmd_expanded = keycmd % (bp, self.key_file)
         self.changed = False
         raw_res = self.m.run_command(keycmd_expanded)
-        keyinfo = raw_res[2]
+        keyinfo = raw_res[1]
         self._debug('keyinfo: %s' % (str(keyinfo)))
-        # keyinfo: gpg: key 32382FA0: \"Pau
-        keysearch = re.match(r'gpg:\s+key\s+([0-9A-F]+):', keyinfo)
+        keysearch = re.search(r'fpr:{9}([0-9A-F]{40}):', keyinfo, re.MULTILINE)
 
         if keysearch and keysearch.group(1):
             self._debug('keysearch groups: %s' % (str(keysearch.groups())))
