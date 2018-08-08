@@ -192,7 +192,7 @@ def main():
             state=dict(default='present', choices=['latest', 'absent', 'present']),
         ),
         supports_check_mode=True,
-        required_one_of=[['keybase_user', 'key_file']],
+        required_one_of=[['key_id', 'key_file',]],
         required_together=[['keybase_user', 'key_id']],
     )
 
