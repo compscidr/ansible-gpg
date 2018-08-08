@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# © Adapted for Keybase.io by Brandon Kalinowski
+# © Adapted for Keybase.io and style by Brandon Kalinowski
 # © Original Code by Thelonius Kort - MIT License
 
 import re
@@ -35,6 +35,18 @@ class GpgImport(object):
     def _debug(self, msg):
         # named 'debuglist' to avoid 'self.debug()' attempting to work.
         self.debuglist.append(msg)
+
+    def trust_all(self):
+        self._debug('Checking Trust')
+        res = self._execute_command('check-trust')
+        self._debug('check trust: %s' % (str(res['stdout'])))
+        gpg_output = res['stdout']
+        pattern = re.findall('fpr:::::::::([0-9A-F]+):', gpg_output)
+        # Create list with all keys marked as trusted:
+        trusted = ":6:\n".join(pattern) + ":6:"
+        res = self._execute_command('import-trust', data=trusted)
+        self._debug('import trust: %s' % (str(res['stdout'])))
+
 
     def get_keybase(self):
         url = 'https://keybase.io/' + self.m.params["keybase_user"] + '/pgp_keys.asc'
@@ -108,16 +120,12 @@ class GpgImport(object):
 
         # Check if a change has occurred and mark all keys as trusted
         if self.changed and self.state != 'absent':
-            self._debug('Checking Trust')
-            res = self._execute_command('check-trust')
-            self._debug('check trust: %s' % (str(res['stdout'])))
-            # res['stdout']
+            self.trust_all()
 
     def _setup_creds(self, key_override=None):
         for k, v in self.m.params.items():
             setattr(self, k, v)
-        if key_override:
-            self.key_id = key_override
+
         self.commands = {
             'check':   '{bin_path} {check_mode} --list-keys {key_id}',
             'delete':  '{bin_path} {check_mode} --batch --yes --delete-secret-and-public-keys {key_id}',
@@ -126,6 +134,7 @@ class GpgImport(object):
             'import-key': '{bin_path} {check_mode} --batch --import {key_file}',
             'keybase': '{bin_path} {check_mode} --batch --import',
             'check-trust': '{bin_path} {check_mode} --list-keys --fingerprint --with-colons',
+            'import-trust': '{bin_path} {check_mode} --import-ownertrust',
         }
         command_data = {
             'check_mode': '--dry-run' if self.m.check_mode else '',
