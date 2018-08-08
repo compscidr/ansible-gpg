@@ -1,9 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# © Brandon Kalinowski
+# © Adapted for Keybase.io by Brandon Kalinowski
 # © Original Code by Thelonius Kort - MIT License
 
-# from time import sleep
 import re
 import string
 from ansible.module_utils.basic import *
@@ -12,6 +11,7 @@ from ansible.module_utils.urls import fetch_url
 class SafeDict(dict):
     def __missing__(self, key):
         return '{' + key + '}'
+
 
 # http://stackoverflow.com/a/33621609/659298
 class SafeFormatter(string.Formatter):
@@ -40,14 +40,9 @@ class GpgImport(object):
         url = 'https://keybase.io/' + self.m.params["keybase_user"] + '/pgp_keys.asc'
         rsp, info = fetch_url(self.m, url=url, timeout=10, method='GET')
 
-        status_code = info["status"]
         # Check for errors first
-        remote_key = rsp.read()
-        if status_code >= 400:
-            remote_key = info['body']
-
         # Exceptions in fetch_url may result in a status -1, ensure error in all cases.
-        elif info['status'] == -1:
+        if info['status'] == -1:
             self.m.fail_json(msg=info['msg'], url=url)
 
         elif info['status'] != 200:
@@ -57,56 +52,52 @@ class GpgImport(object):
                 response=info['msg'], url=url
             )
         else:
-            # raw_res = self.m.run_command('/usr/bin/gpg --import', data=remote_key)
+            remote_key = rsp.read()
             return remote_key
 
     def _execute_task(self):
         key_present = False
 
-        if self.keybase_user:
-            self._debug("Keybase user is defined")
-            # self.get_keybase()
+        if self.keybase_user and self.key_id:
             res = self._execute_command('check')
+            self._debug('keybase check: %s' % (str(res)))
             key_present = res['rc'] == 0
             self.changed = False
-        else:
-            if self.key_id:
-                res = self._execute_command('check')
+
+        elif self.key_type == 'public':
+            filekey = self._get_key_from_file()
+            if filekey:
+                # rerun the original setup with this key in the commands
+                self._setup_creds(filekey)
+                res = self._execute_command('check-public')
+                self._debug('checkpublic: %s' % (str(res)))
                 key_present = res['rc'] == 0
-            elif self.key_type == 'public':
-                filekey = self._get_key_from_file()
-                if filekey:
-                    # rerun the original setup with this key in the commands
-                    self._setup_creds(filekey)
-                    res = self._execute_command('check-public')
-                    self._debug('checkpublic: %s' % (str(res)))
-                    key_present = res['rc'] == 0
-            elif self.key_type == 'private':
-                filekey = self._get_key_from_file()
-                if filekey:
-                    # rerun the original setup with this key in the commands
-                    self._setup_creds(filekey)
-                    res = self._execute_command('check-private')
-                    self._debug('checkprivate: %s' % (str(res)))
-                    key_present = res['rc'] == 0
+
+        elif self.key_type == 'private':
+            filekey = self._get_key_from_file()
+            if filekey:
+                # rerun the original setup with this key in the commands
+                self._setup_creds(filekey)
+                res = self._execute_command('check-private')
+                self._debug('checkprivate: %s' % (str(res)))
+                key_present = res['rc'] == 0
 
         if key_present and self.state == 'absent':
             res = self._execute_command('delete')
             self.changed = res['rc'] == 0
         elif key_present and self.state == 'latest':
             res = self._execute_command('keybase', data=self.get_keybase())
-            # res = self._repeat_command('refresh')
             self.changed = re.search('gpg:\s+unchanged: 1\n', res['stderr']) is None
         elif not key_present and self.state in ('present', 'latest'):
             if self.key_type == 'private' and self.key_file:
+                self._debug('importing private key file')
                 res = self._execute_command('import-key')
-                self._debug('running i-private')
             elif self.keybase_user:
+                self._debug('importing Keybase public keys for' + self.keybase_user)
                 res = self._execute_command('keybase', data=self.get_keybase())
-
             elif self.key_type == 'public':
+                self._debug('importing public key file')
                 res = self._execute_command('import-key')
-                self._debug('running i-public')
             self.changed = res['rc'] == 0
         else:
             self.changed = False
@@ -115,6 +106,12 @@ class GpgImport(object):
         if res['rc'] != 0:
             self.m.fail_json(msg=self.log_dic, debug=self.debuglist)
 
+        # Check if a change has occurred and mark all keys as trusted
+        if self.changed and self.state != 'absent':
+            self._debug('Checking Trust')
+            res = self._execute_command('check-trust')
+            self._debug('check trust: %s' % (str(res['stdout'])))
+            # res['stdout']
 
     def _setup_creds(self, key_override=None):
         for k, v in self.m.params.items():
@@ -128,6 +125,7 @@ class GpgImport(object):
             'check-public':  '{bin_path} {check_mode} --list-public-keys {key_id}',
             'import-key': '{bin_path} {check_mode} --batch --import {key_file}',
             'keybase': '{bin_path} {check_mode} --batch --import',
+            'check-trust': '{bin_path} {check_mode} --list-keys --fingerprint --with-colons',
         }
         command_data = {
             'check_mode': '--dry-run' if self.m.check_mode else '',
@@ -135,29 +133,12 @@ class GpgImport(object):
             'key_id': self.key_id,
             'key_file': self.key_file
         }
-        # sort of a brilliant way of late-binding/double-formatting given here: http://stackoverflow.com/a/17215533/659298
+        # sort of a brilliant way of late-binding/double-formatting given here:
+        # http://stackoverflow.com/a/17215533/659298
         for c, l in self.commands.items():
             sf = SafeFormatter()
             self.commands[c] = sf.format(l, **command_data)
-        # self.urls = [s if re.match('hkps?://', s)
-        #                else 'hkp://%s' % s
-        #              for s in self.servers]
         self._debug('set up commands: %s' % (str(self.commands)))
-
-    # def _repeat_command(self, cmd):
-    #     for n in range(self.tries):
-    #         for u in self.urls:
-    #             sf = SafeFormatter()
-    #             full_command = sf.format(
-    #                 self.commands[cmd], timeout=self.gpg_timeout, url=u
-    #             )
-    #             self._debug("full command: %s" % (full_command))
-    #             raw_res = self.m.run_command(full_command)
-    #             res = self._legiblify(cmd, raw_res)
-    #             if res['rc'] == 0:
-    #                 return res
-    #             sleep(self.delay)
-    #     return {'rc': 8888}
 
     def _execute_command(self, cmd, data=''):
         self._debug('command: %s' % (str(self.commands[cmd])))
@@ -167,14 +148,11 @@ class GpgImport(object):
             raw_res = self.m.run_command(self.commands[cmd])
         return self._legiblify(cmd, raw_res)
 
-    def _legiblify(self, res):
+    def _legiblify(self, sec, res):
         """turn tuple to dict and preserve it for debugging"""
         if not hasattr(self, 'log_dic'):
             self.log_dic = {}
         rdic = dict([k, res[i]] for i, k in enumerate(('rc', 'stdout', 'stderr')))
-        # self.log_dic.setdefault(sec, {'tries': [], 'num_tries':  0})
-        # self.log_dic[sec]['tries'].append(rdic)
-        # self.log_dic[sec]['num_tries'] += 1
         return rdic
 
     def _get_key_from_file(self):
@@ -214,7 +192,7 @@ def main():
     result = {
         'log_dic': gkm.log_dic,
         'changed': gkm.changed,
-        'debug': gkm.debuglist
+        'debug': gkm.debuglist,
     }
 
     module.exit_json(**result)
