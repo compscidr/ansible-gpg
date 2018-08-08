@@ -8,6 +8,76 @@ import string
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import fetch_url
 
+DOCUMENTATION = '''
+---
+module: gpg
+version_added: 2.0
+short_description:  Manages import and removal of GPG-keys
+description:
+     - Imports, refreshes, and deletes GnuPG keys. Just specify the keybase
+       username and either the key email or key fingerprint.
+       You can also import keys from files.
+options:
+  keybase_user:
+    description:
+      - The Username to fetch on Keybase. The module will download
+        https://keybase.io/<keybase_user>/pgp_keys.asc automatically when specified.
+  key_id:
+    description:
+      - The id of the key to be fetched and imported.
+        Only applicable to public keys. Either key_file or key_id is required.
+    required: false
+    default: null
+  key_file:
+    description:
+      - Filename of key to be imported. Must be on remote machine, not local.
+        Either key_file or key_id is required.
+        Can also be used with delete, module will extract the fingerprint from the provided key file and
+        delete the matching key from the key-chain.
+    required: false
+    default: null
+  key_type:
+    description:
+      - What type of key to import. Only applicable to key_file
+    required: true
+    choices: [ "private", "public" ]
+    default: "public"
+  bin_path:
+    description:
+      - "Location of GPG binary"
+    require: false
+    default: /usr/bin/gpg
+  state:
+    description:
+      - Whether to import (C(present), C(latest)), or remove (C(absent)) a key.
+    required: false
+    choices: [ "present", "latest", "absent" ]
+    default: "present"
+notes: []
+requirements: [ gpg ]
+author: Brandon Kalinowski
+'''
+
+EXAMPLES = '''
+- name: Import GPG key from keybase
+    gpg:
+      keybase_user: brandonkal
+      state: present
+      key_id: F33344CEF855F4FE4C2C55820E9D2E07D3D89BDD
+      # Key ID can be fingerprint as above or email address
+
+- name: Import Public GPG Key from file
+    gpg:
+      key_file: publickey.asc
+      key_id: you@email.com
+
+- name: Remove GPG Key
+    gpg:
+      key_id: you@email.com
+      state: absent
+'''
+
+
 class SafeDict(dict):
     def __missing__(self, key):
         return '{' + key + '}'
@@ -21,8 +91,7 @@ class SafeFormatter(string.Formatter):
     def get_value(self, key, args, kwds):
         if isinstance(key, str):
             return kwds.get(key, self.default.format(key))
-        else:
-            string.Formatter.get_value(key, args, kwds)
+        string.Formatter.get_value(key, args, kwds)
 
 class GpgImport(object):
 
