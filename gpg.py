@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # © Adapted for Keybase.io and style by Brandon Kalinowski
 # © Original Code by Thelonius Kort - MIT License
@@ -73,7 +73,8 @@ EXAMPLES = '''
 
 - name: Remove GPG Key
     gpg:
-      key_id: you@email.com
+      keybase_user: gpgtools
+      key_id: team@gpgtools.com
       state: absent
 '''
 
@@ -92,6 +93,7 @@ class SafeFormatter(string.Formatter):
         if isinstance(key, str):
             return kwds.get(key, self.default.format(key))
         string.Formatter.get_value(key, args, kwds)
+
 
 class GpgImport(object):
 
@@ -116,7 +118,6 @@ class GpgImport(object):
         res = self._execute_command('import-trust', data=trusted)
         self._debug('import trust: %s' % (str(res['stdout'])))
 
-
     def get_keybase(self):
         url = 'https://keybase.io/' + self.m.params["keybase_user"] + '/pgp_keys.asc'
         rsp, info = fetch_url(self.m, url=url, timeout=10, method='GET')
@@ -133,30 +134,32 @@ class GpgImport(object):
                 response=info['msg'], url=url
             )
         else:
-            remote_key = rsp.read()
+            # Required for python3
+            remote_key = to_native(rsp.read())
             return remote_key
 
     def _execute_task(self):
         key_present = False
 
-        if self.keybase_user and self.key_id:
-            res = self._execute_command('check')
-            self._debug('keybase check: %s' % (str(res)))
-            key_present = res['rc'] == 0
-            self.changed = False
+        if self.keybase_user:
+            if self.key_id:
+                res = self._execute_command('check')
+                self._debug('keybase check: %s' % (str(res)))
+                key_present = res['rc'] == 0
+                self.changed = False
+            else:
+                self.m.fail_json(msg='key_id is required when keybase_user is defined!')
 
-        elif self.key_type == 'public':
+        if self.key_file:
             filekey = self._get_key_from_file()
-            if filekey:
+            if self.key_type == 'public' and filekey:
                 # rerun the original setup with this key in the commands
                 self._setup_creds(filekey)
                 res = self._execute_command('check-public')
                 self._debug('checkpublic: %s' % (str(res)))
                 key_present = res['rc'] == 0
 
-        elif self.key_type == 'private':
-            filekey = self._get_key_from_file()
-            if filekey:
+            elif self.key_type == 'private' and filekey:
                 # rerun the original setup with this key in the commands
                 self._setup_creds(filekey)
                 res = self._execute_command('check-private')
@@ -174,7 +177,7 @@ class GpgImport(object):
                 self._debug('importing private key file')
                 res = self._execute_command('import-key')
             elif self.keybase_user:
-                self._debug('importing Keybase public keys for' + self.keybase_user)
+                self._debug('importing Keybase public keys for ' + self.keybase_user)
                 res = self._execute_command('keybase', data=self.get_keybase())
             elif self.key_type == 'public':
                 self._debug('importing public key file')
@@ -185,6 +188,7 @@ class GpgImport(object):
             res = {'rc': 0}
 
         if res['rc'] != 0:
+            self._debug(res)
             self.m.fail_json(msg=self.log_dic, debug=self.debuglist)
 
         # Check if a change has occurred and mark all keys as trusted
@@ -194,16 +198,18 @@ class GpgImport(object):
     def _setup_creds(self, key_override=None):
         for k, v in self.m.params.items():
             setattr(self, k, v)
+        if key_override:
+            self.key_id = key_override
 
         self.commands = {
             'check':   '{bin_path} {check_mode} --list-keys {key_id}',
             'delete':  '{bin_path} {check_mode} --batch --yes --delete-secret-and-public-keys {key_id}',
             'check-private':  '{bin_path} {check_mode} --list-secret-keys {key_id}',
             'check-public':  '{bin_path} {check_mode} --list-public-keys {key_id}',
-            'import-key': '{bin_path} {check_mode} --batch --import {key_file}',
-            'keybase': '{bin_path} {check_mode} --batch --import',
+            'import-key': '{bin_path} {check_mode} --batch --fast-import {key_file}',
+            'keybase': '{bin_path} {check_mode} --batch --fast-import',
             'check-trust': '{bin_path} {check_mode} --list-keys --fingerprint --with-colons',
-            'import-trust': '{bin_path} {check_mode} --import-ownertrust',
+            'import-trust': '{bin_path} {check_mode} --fast-ownertrust',
         }
         command_data = {
             'check_mode': '--dry-run' if self.m.check_mode else '',
@@ -261,8 +267,7 @@ def main():
             state=dict(default='present', choices=['latest', 'absent', 'present']),
         ),
         supports_check_mode=True,
-        required_one_of=[['key_id', 'key_file',]],
-        required_together=[['keybase_user', 'key_id']],
+        required_one_of=[['keybase_user', 'key_file']],
     )
 
     gkm = GpgImport(module)
