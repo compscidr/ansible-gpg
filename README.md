@@ -24,6 +24,8 @@ https://brandonkalinowski.com/tag/encryption/
 - name: GPG Module Examples
   hosts: vagrant
   gather_facts: false
+  roles:
+    - role: compscidr.gpg
   tasks:
 
   - name: Import GPG key from keybase
