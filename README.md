@@ -2,7 +2,10 @@
 
 Ansible module to import and remove GPG-keys using keybase.io or files.
 
-Based on the work by [Thelonius Kort](https://github.com/tnt), this was an interesting challenge for a Javascript developer. With this module, managing gpg keys is very simple. Just specify the keybase username and either the key email or key fingerprint. You can also import keys from files.
+Based on the work by [Brandon Kalinowski](https://github.com/brandonkal/ansible-gpg) and [Thelonius Kort](https://github.com/tnt). Updated so that this can be published
+to ansible-galaxy.
+
+With this module, managing gpg keys is very simple. Just specify the keybase username and either the key email or key fingerprint. You can also import keys from files.
 
 The ansible fetch_url method is used for secure download of public keys over https.
 
@@ -83,15 +86,3 @@ https://brandonkalinowski.com/tag/encryption/
 ### Usage
 
 Simply copy `gpg.py` to `playbook_dir/library/gpg.py` or clone the repository and add the path to the library via `ansible.cfg` or the environment variable.
-
-# License
-
-MIT License:
-
-Copyright 2018 Brandon Kalinowski
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
