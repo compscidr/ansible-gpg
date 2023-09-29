@@ -4,7 +4,7 @@ galaxy_info:
   namespace: compscidr
   role_name: gpg
   author: Jason Ernst
-  description: Enables uncompress of .gz and .bz2 files which aren't tarred
+  description: Enables import and removal of GPG-keys using keybase.io or files
   company:
   license: MIT
   min_ansible_version: 2.4
