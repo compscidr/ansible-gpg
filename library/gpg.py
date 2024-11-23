@@ -165,11 +165,11 @@ class GpgImport(object):
                 res = self._execute_command('check-private')
                 self._debug('checkprivate: %s' % (str(res)))
                 key_present = res['rc'] == 0
-
         if key_present and self.state == 'absent':
             res = self._execute_command('delete')
             self.changed = res['rc'] == 0
         elif key_present and self.state == 'latest' and self.keybase_user:
+            self._debug("keybase user: %s" % (str(self.keybase_user)))
             res = self._execute_command('keybase', data=self.get_keybase())
             self.changed = re.search('gpg:\s+unchanged: 1\n', res['stderr']) is None
         elif not key_present and self.state in ('present', 'latest'):
