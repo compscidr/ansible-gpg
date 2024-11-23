@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 # © Adapted for Keybase.io and style by Brandon Kalinowski
 # © Original Code by Thelonius Kort - MIT License
