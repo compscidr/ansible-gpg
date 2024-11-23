@@ -168,10 +168,6 @@ class GpgImport(object):
         if key_present and self.state == 'absent':
             res = self._execute_command('delete')
             self.changed = res['rc'] == 0
-        elif key_present and self.state == 'latest' and self.keybase_user:
-            self._debug("keybase user: %s" % (str(self.keybase_user)))
-            res = self._execute_command('keybase', data=self.get_keybase())
-            self.changed = re.search('gpg:\s+unchanged: 1\n', res['stderr']) is None
         elif not key_present and self.state in ('present', 'latest'):
             if self.key_type == 'private' and self.key_file:
                 self._debug('importing private key file')
@@ -183,6 +179,12 @@ class GpgImport(object):
                 self._debug('importing public key file')
                 res = self._execute_command('import-key')
             self.changed = res['rc'] == 0
+        elif key_present and self.state == 'latest' and self.keybase_user:
+            try:
+              res = self._execute_command('keybase', data=self.get_keybase())
+              self.changed = re.search('gpg:\s+unchanged: 1\n', res['stderr']) is None
+            except:
+              print("Error trying to use keybase, might not be installed")
         else:
             self.changed = False
             res = {'rc': 0}
