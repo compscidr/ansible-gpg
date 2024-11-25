@@ -5,15 +5,15 @@ galaxy_info:
   role_name: gpg
   author: Jason Ernst
   description: Enables import and removal of GPG-keys using keybase.io or files
-  company:
+  company: ""
   license: MIT
-  min_ansible_version: 2.4
+  min_ansible_version: "2.4"
   platforms:
     - name: Ubuntu
       versions:
         - bionic # 18.04 LTS
-        - focal  # 20.04 LTS
-        - jammy  # 22.04 LTS
+        - focal # 20.04 LTS
+        - jammy # 22.04 LTS
         - noble  # 24.04 LTS
   galaxy_tags:
     - gpg

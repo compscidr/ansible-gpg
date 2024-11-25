@@ -1,10 +1,7 @@
----
-name: Galaxy-NG Roles Import
-
-# yamllint disable-line rule:truthy
+name: galaxy-ng-import
 on:
   release:
-    types: ['created']
+    types: ["created"]
 
 jobs:
   build:
@@ -14,10 +11,6 @@ jobs:
     steps:
       - name: 'Checkout git repo'
         uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
-
       - name: 'Release on galaxy'
         uses: ansible-actions/ansible-galaxy-action@v1.2.0
         with:
