@@ -1,0 +1,40 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  pre_tasks:
+    # Ensure GPG is installed in the test container
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install GPG and curl for testing
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - curl
+        state: present
+
+    # Create a minimal test GPG key file (just for testing file handling)
+    - name: Create test GPG key file
+      ansible.builtin.copy:
+        content: |
+          -----BEGIN PGP PUBLIC KEY BLOCK-----
+          Comment: Test GPG key for molecule testing
+
+          mQENBF1234ABCAC1234567890abcdef1234567890abcdef1234567890abcdef
+          1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+          1234567890abcdef1234567890abcdef1234567890abcdefAABBCCDDEEFF1122
+          3344556677889900AABBCCDDEEFF112233445566778899001234567890abcde
+          f1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcde
+          f1234567890abcdef1234567890abcdef1234567890abcdef1234567890ABCDE
+          -----END PGP PUBLIC KEY BLOCK-----
+        dest: /tmp/test_key.asc
+        mode: '0644'
+
+  tasks:
+    # Test that the role structure works and can be included
+    - name: Test that GPG role can be included
+      ansible.builtin.include_role:
+        name: "compscidr.gpg"

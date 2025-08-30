@@ -1,0 +1,21 @@
+---
+dependency:
+  name: galaxy
+  enabled: false  # Disable dependency installation for testing in isolated environment
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: ubuntu:20.04
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_LIBRARY: ./library
+  config_options:
+    defaults:
+      allow_broken_conditionals: true
+verifier:
+  name: ansible
+  env:
+    ANSIBLE_LIBRARY: ./library
