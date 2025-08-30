@@ -1,0 +1,62 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    # Verify GPG is available on the system
+    - name: Verify GPG is installed
+      ansible.builtin.command: gpg --version
+      register: gpg_version_result
+      changed_when: false
+
+    - name: Show GPG version
+      ansible.builtin.debug:
+        var: gpg_version_result.stdout_lines
+
+    # Verify the GPG module is available and can be loaded
+    - name: Test GPG module availability
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../../library/gpg.py"
+      register: gpg_module_stat
+      delegate_to: localhost
+
+    - name: Verify GPG module exists
+      ansible.builtin.assert:
+        that:
+          - gpg_module_stat.stat.exists
+        fail_msg: "GPG module not found at expected location"
+        success_msg: "GPG module found and accessible"
+
+    # Verify the test key file was created during converge
+    - name: Verify test key file exists
+      ansible.builtin.stat:
+        path: /tmp/test_key.asc
+      register: test_key_stat
+
+    - name: Verify test key file was created
+      ansible.builtin.assert:
+        that:
+          - test_key_stat.stat.exists
+        fail_msg: "Test key file was not created"
+        success_msg: "Test key file exists as expected"
+
+    # Verify the role structure is correct
+    - name: Check role tasks file exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../../tasks/main.yml"
+      register: tasks_main_stat
+      delegate_to: localhost
+
+    - name: Check role meta file exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../../meta/main.yml"
+      register: meta_main_stat
+      delegate_to: localhost
+
+    - name: Verify role structure
+      ansible.builtin.assert:
+        that:
+          - tasks_main_stat.stat.exists
+          - meta_main_stat.stat.exists
+        fail_msg: "Required role files missing"
+        success_msg: "Role structure is correct"

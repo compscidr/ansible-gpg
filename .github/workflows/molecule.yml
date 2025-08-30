@@ -1,0 +1,42 @@
+name: Molecule CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run tests weekly to catch regressions
+    - cron: '0 6 * * 1'
+
+jobs:
+  molecule:
+    name: Molecule Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scenario:
+          - default
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install molecule[docker] molecule-docker
+          python -m pip install ansible-lint
+
+      - name: Test with molecule
+        run: |
+          molecule test --scenario-name ${{ matrix.scenario }}
+        env:
+          # Molecule will use these environment variables
+          MOLECULE_NO_LOG: false
+          MOLECULE_DEBUG: false
