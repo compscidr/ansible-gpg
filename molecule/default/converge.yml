@@ -2,20 +2,7 @@
 - name: Converge
   hosts: all
   become: true
-  pre_tasks:
-    # Ensure GPG is installed in the test container
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: true
-        cache_valid_time: 3600
-
-    - name: Install GPG and curl for testing
-      ansible.builtin.apt:
-        name:
-          - gnupg
-          - curl
-        state: present
-
+  tasks:
     # Create a minimal test GPG key file (just for testing file handling)
     - name: Create test GPG key file
       ansible.builtin.copy:
@@ -33,7 +20,6 @@
         dest: /tmp/test_key.asc
         mode: '0644'
 
-  tasks:
     # Test that the role structure works and can be included
     - name: Test that GPG role can be included
       ansible.builtin.include_role:
