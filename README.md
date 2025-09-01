@@ -1,6 +1,7 @@
 # ansible-gpg
 [![Static Badge](https://img.shields.io/badge/Ansible_galaxy-Download-blue)](https://galaxy.ansible.com/ui/standalone/roles/compscidr/gpg/)
 [![ansible lint](https://github.com/compscidr/ansible-gpg/actions/workflows/check.yml/badge.svg)](https://github.com/compscidr/ansible-gpg/actions/workflows/check.yml)
+[![Molecule CI](https://github.com/compscidr/ansible-gpg/actions/workflows/molecule.yml/badge.svg)](https://github.com/compscidr/ansible-gpg/actions/workflows/molecule.yml)
 [![ansible lint rules](https://img.shields.io/badge/Ansible--lint-rules%20table-blue.svg)](https://ansible.readthedocs.io/projects/lint/rules/)
 
 Ansible module to import and remove GPG-keys using keybase.io or files.
@@ -105,3 +106,15 @@ Then run
       key_id: team@gpgtools.org
       state: absent
 ```
+
+## Testing
+
+This role includes comprehensive testing using [Molecule](https://molecule.readthedocs.io/). Tests are automatically run on every push and pull request.
+
+To run tests locally:
+```bash
+pip install molecule[docker] molecule-docker
+molecule test
+```
+
+See [TESTING.md](TESTING.md) for detailed testing information.
