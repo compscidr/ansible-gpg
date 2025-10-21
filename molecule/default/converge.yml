@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  roles:
+    - role: ansible-gpg
+  tasks:
+    - name: Import a test GPG key from keybase
+      gpg:
+        keybase_user: gpgtools
+        key_id: team@gpgtools.org
+        state: present

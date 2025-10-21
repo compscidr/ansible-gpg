@@ -7,3 +7,12 @@
   ansible.builtin.debug:
     msg: "This role works best with ansible version 2.4 or greater.
       It is recommended to use the latest ansible version for the best experience."
+
+- name: Ensure GPG packages are installed
+  ansible.builtin.apt:
+    name:
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"

@@ -1,0 +1,27 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if GPG is installed
+      ansible.builtin.command: gpg --version
+      register: gpg_version
+      changed_when: false
+      failed_when: gpg_version.rc != 0
+
+    - name: List GPG keys
+      ansible.builtin.command: gpg --list-keys team@gpgtools.org
+      register: gpg_keys
+      changed_when: false
+      failed_when: gpg_keys.rc != 0
+
+    - name: Verify GPG key was imported
+      ansible.builtin.assert:
+        that:
+          - "'team@gpgtools.org' in gpg_keys.stdout"
+        fail_msg: "GPG key for team@gpgtools.org was not found"
+        success_msg: "GPG key for team@gpgtools.org was successfully imported"
+
+    - name: Display verification results
+      ansible.builtin.debug:
+        msg: "All GPG operations verified successfully!"

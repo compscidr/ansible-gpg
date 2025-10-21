@@ -1,6 +1,7 @@
 # ansible-gpg
 [![Static Badge](https://img.shields.io/badge/Ansible_galaxy-Download-blue)](https://galaxy.ansible.com/ui/standalone/roles/compscidr/gpg/)
 [![ansible lint](https://github.com/compscidr/ansible-gpg/actions/workflows/check.yml/badge.svg)](https://github.com/compscidr/ansible-gpg/actions/workflows/check.yml)
+[![Molecule Tests](https://github.com/compscidr/ansible-gpg/actions/workflows/molecule.yml/badge.svg)](https://github.com/compscidr/ansible-gpg/actions/workflows/molecule.yml)
 [![ansible lint rules](https://img.shields.io/badge/Ansible--lint-rules%20table-blue.svg)](https://ansible.readthedocs.io/projects/lint/rules/)
 
 Ansible module to import and remove GPG-keys using keybase.io or files.
@@ -104,4 +105,84 @@ Then run
       keybase_user: gpgtools
       key_id: team@gpgtools.org
       state: absent
+```
+
+## Testing
+
+This role uses [Molecule](https://molecule.readthedocs.io/) for testing across multiple Ubuntu versions (20.04, 22.04, 24.04).
+
+### Prerequisites
+
+- Python 3.8 or later
+- Docker (with running daemon)
+- Docker permissions for your user (or run tests as a user in the docker group)
+
+### Setup
+
+1. Clone the repository and navigate to the project directory
+2. Create a virtual environment:
+   ```bash
+   python3 -m venv venv
+   ```
+
+3. Activate the virtual environment:
+   ```bash
+   # Linux/macOS
+   source venv/bin/activate
+
+   # Windows
+   venv\Scripts\activate
+   ```
+
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Install required Ansible collections:
+   ```bash
+   ansible-galaxy collection install community.docker
+   ```
+
+### Running Tests
+
+Run the complete test suite:
+```bash
+molecule test
+```
+
+Run tests for a specific platform:
+```bash
+molecule test --platform-name ubuntu-22.04
+```
+
+### Development Workflow
+
+For faster iteration during development:
+
+1. Create test instances:
+   ```bash
+   molecule create
+   ```
+
+2. Apply the role:
+   ```bash
+   molecule converge
+   ```
+
+3. Run verification tests:
+   ```bash
+   molecule verify
+   ```
+
+4. Clean up:
+   ```bash
+   molecule destroy
+   ```
+
+### Cleanup
+
+Deactivate the virtual environment:
+```bash
+deactivate
 ```
