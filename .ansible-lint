@@ -2,3 +2,5 @@
 exclude_paths:
   - .github/
   - molecule/
+skip_list:
+  - meta-runtime # ansible-lint hasn't added 2.20 to its supported versions list yet
